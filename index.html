@@ -1,0 +1,2596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Préstamos con Capitalización</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3498db;
+            --secondary-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --dark-color: #2c3e50;
+            --light-color: #ecf0f1;
+            --gray-color: #95a5a6;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        header {
+            background: linear-gradient(135deg, var(--dark-color), #1a2530);
+            color: white;
+            padding: 1.5rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-bottom: 4px solid var(--primary-color);
+        }
+        
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            background-color: white;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            flex-wrap: wrap;
+        }
+        
+        .tab {
+            padding: 15px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+            justify-content: center;
+            min-width: 150px;
+        }
+        
+        .tab.active {
+            background: linear-gradient(135deg, var(--primary-color), #2980b9);
+            color: white;
+            box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+        }
+        
+        .tab:hover:not(.active) {
+            background-color: #f8f9fa;
+        }
+        
+        .tab-content {
+            display: none;
+            background-color: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        input, select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.3s;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        button {
+            background: linear-gradient(135deg, var(--primary-color), #2980b9);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, var(--secondary-color), #27ae60);
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, var(--warning-color), #e67e22);
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+        
+        .btn-reset {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .stats-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 35px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            text-align: center;
+            border-top: 4px solid var(--primary-color);
+        }
+        
+        .stat-card.earnings {
+            border-top-color: var(--secondary-color);
+        }
+        
+        .stat-card.loaned {
+            border-top-color: var(--primary-color);
+        }
+        
+        .stat-card.recaudo {
+            border-top-color: var(--warning-color);
+        }
+        
+        .stat-card.active {
+            border-top-color: var(--danger-color);
+        }
+        
+        .stat-card.capital {
+            border-top-color: #9b59b6;
+        }
+        
+        .stat-card.daily {
+            border-top-color: #3498db;
+        }
+        
+        .stat-card.weekly {
+            border-top-color: #2ecc71;
+        }
+        
+        .stat-card.biweekly {
+            border-top-color: #f39c12;
+        }
+        
+        .stat-card.monthly {
+            border-top-color: #9b59b6;
+        }
+        
+        .stat-value {
+            font-size: 2.2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .stat-positive {
+            color: var(--secondary-color);
+        }
+        
+        .stat-negative {
+            color: var(--danger-color);
+        }
+        
+        .stat-neutral {
+            color: var(--primary-color);
+        }
+        
+        .loans-table-container, .capital-table-container, .active-loans-table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        
+        .loans-table, .capital-table, .active-loans-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .loans-table th, .loans-table td, .capital-table th, .capital-table td, .active-loans-table th, .active-loans-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .loans-table th, .capital-table th, .active-loans-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+            color: var(--dark-color);
+        }
+        
+        .loans-table tr:hover, .capital-table tr:hover, .active-loans-table tr:hover {
+            background-color: #f5f7fa;
+        }
+        
+        .status-pending {
+            color: var(--warning-color);
+            font-weight: 600;
+        }
+        
+        .status-paid {
+            color: var(--secondary-color);
+            font-weight: 600;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.85rem;
+            border-radius: 6px;
+        }
+        
+        .payment-form, .capital-form, .edit-source-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            display: none;
+        }
+        
+        .payment-form.active, .capital-form.active, .edit-source-form.active {
+            display: block;
+        }
+        
+        .payment-form-buttons, .capital-form-buttons, .export-buttons, .config-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            transform: translateX(150%);
+            transition: transform 0.5s ease;
+        }
+        
+        .notification.show {
+            transform: translateX(0);
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, var(--secondary-color), #27ae60);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+        }
+        
+        .notification.warning {
+            background: linear-gradient(135deg, var(--warning-color), #e67e22);
+        }
+        
+        .calculation-preview {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .calculation-preview h4 {
+            margin-bottom: 10px;
+            color: var(--dark-color);
+        }
+        
+        .calculation-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .calculation-item {
+            padding: 10px;
+            background: white;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .funds-available {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--secondary-color);
+        }
+        
+        .funds-available.warning {
+            background: #ffecb3;
+            border-left-color: var(--warning-color);
+        }
+        
+        .funds-available.danger {
+            background: #ffcdd2;
+            border-left-color: var(--danger-color);
+        }
+        
+        .payment-destination {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .capital-warning {
+            background: #fff3cd;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            border-left: 4px solid var(--warning-color);
+        }
+        
+        .currency-input {
+            position: relative;
+        }
+        
+        .currency-input::before {
+            content: "$";
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: bold;
+            color: #555;
+            z-index: 1;
+        }
+        
+        .currency-input input {
+            padding-left: 25px;
+        }
+        
+        .export-section, .backup-section, .update-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .reset-section {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid var(--danger-color);
+        }
+        
+        .reset-section h4 {
+            color: var(--danger-color);
+            margin-bottom: 10px;
+        }
+        
+        .reset-section p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .charts-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .chart-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            height: 400px;
+        }
+        
+        .chart-card canvas {
+            width: 100% !important;
+            height: 300px !important;
+        }
+        
+        .debtor-details {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            border-left: 4px solid var(--primary-color);
+        }
+        
+        .debtor-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 15px 0;
+        }
+        
+        .debtor-info-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .debtor-info-item strong {
+            display: block;
+            margin-bottom: 5px;
+            color: var(--dark-color);
+        }
+        
+        .payment-frequency-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            margin-bottom: 25px;
+        }
+        
+        .payment-frequency-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+            color: var(--dark-color);
+        }
+        
+        .payment-frequency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+        
+        .payment-frequency-item {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            background: #f8f9fa;
+            transition: all 0.3s;
+        }
+        
+        .payment-frequency-item:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .payment-frequency-item.daily {
+            border-left: 4px solid #3498db;
+        }
+        
+        .payment-frequency-item.weekly {
+            border-left: 4px solid #2ecc71;
+        }
+        
+        .payment-frequency-item.biweekly {
+            border-left: 4px solid #f39c12;
+        }
+        
+        .payment-frequency-item.monthly {
+            border-left: 4px solid #9b59b6;
+        }
+        
+        .payment-frequency-item h4 {
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+            color: var(--dark-color);
+        }
+        
+        .payment-frequency-amount {
+            font-size: 2rem;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        
+        .payment-frequency-count {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .payment-form-buttons, .capital-form-buttons, .export-buttons, .config-buttons {
+                flex-direction: column;
+            }
+            
+            .charts-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .chart-card {
+                height: 350px;
+            }
+            
+            .tab {
+                min-width: 120px;
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .payment-frequency-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .payment-frequency-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media print {
+            header, .tabs, .action-buttons, .export-section, .reset-section, .backup-section, .update-section {
+                display: none !important;
+            }
+            
+            .container {
+                padding: 0;
+            }
+            
+            .tab-content {
+                box-shadow: none;
+                padding: 10px;
+            }
+            
+            .debtor-details {
+                break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <h1>🏦 Gestor de Préstamos con Capitalización</h1>
+                <div id="current-date"></div>
+            </div>
+        </div>
+    </header>
+    
+    <div class="container">
+        <div class="tabs">
+            <div class="tab active" data-tab="register">📝 Registrar Préstamo</div>
+            <div class="tab" data-tab="active-loans">👥 Préstamos Activos</div>
+            <div class="tab" data-tab="capital">💰 Mi Capital</div>
+            <div class="tab" data-tab="dashboard">📊 Panel de Control</div>
+            <div class="tab" data-tab="config">⚙️ Configuración</div>
+        </div>
+        
+        <!-- Pestaña 1: Registrar Préstamo -->
+        <div id="register-tab" class="tab-content active">
+            <h2>Registrar Nuevo Préstamo</h2>
+            
+            <div id="funds-alert"></div>
+            
+            <form id="loan-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="form-group">
+                        <label for="debtor-name">👤 Nombre del Deudor</label>
+                        <input type="text" id="debtor-name" required placeholder="Ingrese nombre completo">
+                    </div>
+                    
+                    <div class="form-group currency-input">
+                        <label for="loan-amount">💰 Monto del Préstamo</label>
+                        <input type="text" id="loan-amount" required placeholder="0" oninput="formatCurrencyInput(this)" onblur="validateCurrencyInput(this)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="capital-source">🏦 Fuente de Capital</label>
+                        <select id="capital-source" required onchange="showCapitalWarning()">
+                            <option value="">Seleccione fuente de capital</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="interest-type">📈 Tipo de Interés</label>
+                        <select id="interest-type" required>
+                            <option value="monthly">Mensual</option>
+                            <option value="total">Total del período</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="interest-rate">📊 Tasa de Interés (%)</label>
+                        <input type="text" id="interest-rate" required placeholder="0" oninput="formatPercentageInput(this)" onblur="validatePercentageInput(this)">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="loan-date">📅 Fecha del Préstamo</label>
+                        <input type="date" id="loan-date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="installment-type">⏰ Tipo de Cuota</label>
+                        <select id="installment-type" required>
+                            <option value="days">Diarias</option>
+                            <option value="weeks">Semanales</option>
+                            <option value="biweekly">Quincenales</option>
+                            <option value="months">Mensuales</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="installment-count">🔢 Número de Cuotas</label>
+                        <input type="number" id="installment-count" min="1" required placeholder="1">
+                    </div>
+                </div>
+                
+                <div id="capital-warning" class="capital-warning" style="display: none;">
+                    <strong>⚠️ Advertencia</strong>
+                    <p id="capital-warning-text"></p>
+                </div>
+                
+                <!-- Vista previa del cálculo -->
+                <div id="calculation-preview" class="calculation-preview" style="display: none;">
+                    <h4>📋 Resumen del Préstamo</h4>
+                    <div class="calculation-details">
+                        <div class="calculation-item">
+                            <strong>Monto Principal</strong>
+                            <div id="preview-principal">$0</div>
+                        </div>
+                        <div class="calculation-item">
+                            <strong>Intereses Totales</strong>
+                            <div id="preview-interest">$0</div>
+                        </div>
+                        <div class="calculation-item">
+                            <strong>Total a Pagar</strong>
+                            <div id="preview-total">$0</div>
+                        </div>
+                        <div class="calculation-item">
+                            <strong>Valor por Cuota</strong>
+                            <div id="preview-installment">$0</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-success">✅ Registrar Préstamo</button>
+            </form>
+        </div>
+        
+        <!-- Pestaña 2: Préstamos Activos -->
+        <div id="active-loans-tab" class="tab-content">
+            <h2>👥 Préstamos Activos</h2>
+            
+            <div class="active-loans-table-container">
+                <table class="active-loans-table">
+                    <thead>
+                        <tr>
+                            <th>Deudor</th>
+                            <th>Monto</th>
+                            <th>Interés</th>
+                            <th>Fuente</th>
+                            <th>Total a Pagar</th>
+                            <th>Cuota</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="active-loans-list">
+                        <!-- Los préstamos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Detalles del deudor -->
+            <div id="debtor-details" class="debtor-details" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h3 id="debtor-details-title">Detalles del Préstamo</h3>
+                    <button onclick="printDebtorDetails()" class="btn-success">🖨️ Imprimir</button>
+                </div>
+                
+                <div class="debtor-info-grid" id="debtor-info-grid">
+                    <!-- Información se cargará dinámicamente -->
+                </div>
+                
+                <div id="debtor-payment-history" style="margin-top: 20px;">
+                    <!-- Historial de pagos se cargará dinámicamente -->
+                </div>
+            </div>
+            
+            <!-- Formularios -->
+            <div id="payment-form" class="payment-form">
+                <h4>💵 Registrar Pago</h4>
+                
+                <div class="payment-destination">
+                    <h5>🏦 Destino del Pago</h5>
+                    <p>Selecciona a qué fondo de capital quieres enviar este pago:</p>
+                    <div class="form-group">
+                        <label for="payment-destination">Destino del Pago</label>
+                        <select id="payment-destination" required>
+                            <option value="">Seleccione destino del pago</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                    <div class="form-group currency-input">
+                        <label for="payment-amount">Monto del Pago</label>
+                        <input type="text" id="payment-amount" placeholder="0" oninput="formatCurrencyInput(this)" onblur="validateCurrencyInput(this)">
+                    </div>
+                    <div class="form-group">
+                        <label for="payment-date">Fecha del Pago</label>
+                        <input type="date" id="payment-date">
+                    </div>
+                </div>
+                
+                <div class="payment-form-buttons">
+                    <button id="confirm-payment" class="btn-success">✅ Confirmar Pago</button>
+                    <button id="cancel-payment" class="btn-danger">❌ Cancelar</button>
+                </div>
+            </div>
+            
+            <div id="edit-source-form" class="edit-source-form">
+                <h4>✏️ Cambiar Fuente de Capital</h4>
+                <p>Selecciona una nueva fuente de capital para este préstamo:</p>
+                
+                <div class="form-group">
+                    <label for="new-capital-source">Nueva Fuente de Capital</label>
+                    <select id="new-capital-source" required>
+                        <option value="">Seleccione nueva fuente</option>
+                    </select>
+                </div>
+                
+                <div class="payment-form-buttons">
+                    <button id="confirm-edit-source" class="btn-success">✅ Confirmar Cambio</button>
+                    <button id="cancel-edit-source" class="btn-danger">❌ Cancelar</button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña 3: Mi Capital -->
+        <div id="capital-tab" class="tab-content">
+            <h2>💰 Gestión de Capital</h2>
+            
+            <div class="stats-container">
+                <div class="stat-card capital">
+                    <h3>Capital Total</h3>
+                    <div class="stat-value stat-neutral" id="total-capital">$0</div>
+                    <p>Dinero disponible total</p>
+                </div>
+                
+                <div class="stat-card loaned">
+                    <h3>Capital Prestado</h3>
+                    <div class="stat-value stat-negative" id="capital-loaned">$0</div>
+                    <p>Capital en préstamos activos</p>
+                </div>
+                
+                <div class="stat-card recaudo">
+                    <h3>Capital Disponible</h3>
+                    <div class="stat-value stat-positive" id="capital-available">$0</div>
+                    <p>Capital libre para préstamos</p>
+                </div>
+            </div>
+            
+            <h3>➕ Agregar Fondos</h3>
+            <form id="capital-form">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
+                    <div class="form-group">
+                        <label for="capital-name">Nombre del Fondo</label>
+                        <input type="text" id="capital-name" required placeholder="Ej: Caja principal, Banco X, etc.">
+                    </div>
+                    
+                    <div class="form-group currency-input">
+                        <label for="capital-amount">Monto a Agregar</label>
+                        <input type="text" id="capital-amount" required placeholder="0" oninput="formatCurrencyInput(this)" onblur="validateCurrencyInput(this)">
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn-success">➕ Agregar al Capital</button>
+            </form>
+            
+            <h3 style="margin-top: 30px;">🏦 Mis Fondos</h3>
+            
+            <div class="capital-table-container">
+                <table class="capital-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre del Fondo</th>
+                            <th>Monto Inicial</th>
+                            <th>Monto Actual</th>
+                            <th>Préstamos Activos</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="capital-list">
+                        <!-- Los fondos se cargarán aquí dinámicamente -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Pestaña 4: Panel de Control -->
+        <div id="dashboard-tab" class="tab-content">
+            <h2>📊 Panel de Control</h2>
+            
+            <div class="stats-container">
+                <div class="stat-card earnings">
+                    <h3>Ganancias Totales</h3>
+                    <div class="stat-value stat-positive" id="total-earnings">$0</div>
+                    <p>Intereses acumulados</p>
+                </div>
+                
+                <div class="stat-card loaned">
+                    <h3>Saldo Prestado</h3>
+                    <div class="stat-value stat-neutral" id="total-loaned">$0</div>
+                    <p>Capital total prestado</p>
+                </div>
+                
+                <div class="stat-card recaudo {
+                    <h3>Recaudo Total</h3>
+                    <div class="stat-value stat-positive" id="total-recaudo">$0</div>
+                    <p>Dinero recuperado</p>
+                </div>
+                
+                <div class="stat-card active">
+                    <h3>Préstamos Activos</h3>
+                    <div class="stat-value" id="active-loans">0</div>
+                    <p>Préstamos en curso</p>
+                </div>
+            </div>
+            
+            <!-- Nueva sección: Dinero por cobrar según frecuencia -->
+            <div class="payment-frequency-section">
+                <div class="payment-frequency-title">
+                    <h3>💰 Dinero por Cobrar Según Frecuencia</h3>
+                </div>
+                <p style="margin-bottom: 20px; color: #666;">Total de dinero que debes recibir según la frecuencia de pago de los préstamos activos:</p>
+                
+                <div class="payment-frequency-grid">
+                    <div class="payment-frequency-item daily">
+                        <h4>📅 Diario</h4>
+                        <div class="payment-frequency-amount" id="daily-payment-amount">$0</div>
+                        <div class="payment-frequency-count" id="daily-payment-count">0 préstamos</div>
+                    </div>
+                    
+                    <div class="payment-frequency-item weekly">
+                        <h4>📅 Semanal</h4>
+                        <div class="payment-frequency-amount" id="weekly-payment-amount">$0</div>
+                        <div class="payment-frequency-count" id="weekly-payment-count">0 préstamos</div>
+                    </div>
+                    
+                    <div class="payment-frequency-item biweekly">
+                        <h4>📅 Quincenal</h4>
+                        <div class="payment-frequency-amount" id="biweekly-payment-amount">$0</div>
+                        <div class="payment-frequency-count" id="biweekly-payment-count">0 préstamos</div>
+                    </div>
+                    
+                    <div class="payment-frequency-item monthly">
+                        <h4>📅 Mensual</h4>
+                        <div class="payment-frequency-amount" id="monthly-payment-amount">$0</div>
+                        <div class="payment-frequency-count" id="monthly-payment-count">0 préstamos</div>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 8px; border-left: 4px solid var(--secondary-color);">
+                    <h4>💡 Información</h4>
+                    <p style="margin: 0; font-size: 0.9rem;">Estos montos representan el valor total de las cuotas que debes recibir según la frecuencia de pago de cada préstamo activo.</p>
+                </div>
+            </div>
+            
+            <h3 style="margin-top: 30px;">📈 Gráficos</h3>
+            
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h4>📊 Historial de Pagos por Deudor</h4>
+                    <canvas id="debtor-payments-chart"></canvas>
+                </div>
+                
+                <div class="chart-card">
+                    <h4>💰 Distribución de Préstamos por Fuente</h4>
+                    <canvas id="loans-distribution-chart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Pestaña 5: Configuración -->
+        <div id="config-tab" class="tab-content">
+            <h2>⚙️ Configuración</h2>
+            
+            <div class="export-section">
+                <h3>📤 Exportar Datos</h3>
+                <p>Exporta toda la información de préstamos y capital en diferentes formatos:</p>
+                
+                <div class="export-buttons">
+                    <button class="btn-success" onclick="exportToExcel()">📊 Exportar a Excel</button>
+                    <button class="btn-warning" onclick="exportToPDF()">📄 Exportar a PDF</button>
+                    <button class="btn-info" onclick="exportAllData()">📁 Exportar Todo</button>
+                </div>
+            </div>
+            
+            <div class="backup-section">
+                <h3>💾 Backup de Datos</h3>
+                <p>Crea una copia de seguridad de todos los datos de la aplicación:</p>
+                
+                <div class="config-buttons">
+                    <button class="btn-success" onclick="createBackup()">💾 Crear Backup</button>
+                    <button class="btn-warning" onclick="restoreBackup()">🔄 Restaurar Backup</button>
+                </div>
+                
+                <div id="backup-info" style="margin-top: 15px; padding: 10px; background: #e8f5e9; border-radius: 5px; display: none;">
+                    <p><strong>Backup creado:</strong> <span id="backup-date"></span></p>
+                    <p><strong>Archivo:</strong> <span id="backup-file"></span></p>
+                </div>
+            </div>
+            
+            <div class="update-section">
+                <h3>🔄 Actualizar Aplicación</h3>
+                <p>Actualiza la aplicación desde un archivo de backup:</p>
+                
+                <div class="config-buttons">
+                    <input type="file" id="backup-file-input" accept=".json" style="display: none;">
+                    <button class="btn-success" onclick="document.getElementById('backup-file-input').click()">📁 Seleccionar Archivo</button>
+                    <button class="btn-warning" onclick="updateFromBackup()" id="update-button" disabled>🔄 Actualizar desde Archivo</button>
+                </div>
+                
+                <p id="update-status" style="margin-top: 10px; color: #666; font-size: 0.9em;"></p>
+            </div>
+            
+            <div class="reset-section">
+                <h4>⚠️ Resetear Todos los Datos</h4>
+                <p><strong>ADVERTENCIA:</strong> Esta acción eliminará TODOS los préstamos y fondos de capital registrados. Esta acción NO se puede deshacer.</p>
+                
+                <div class="config-buttons">
+                    <button class="btn-reset" onclick="resetAllData()">🗑️ Resetear Todo</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="notification" class="notification">
+        <span id="notification-message"></span>
+    </div>
+
+    <script>
+        // Variables globales
+        let loans = JSON.parse(localStorage.getItem('loans')) || [];
+        let capital = JSON.parse(localStorage.getItem('capital')) || [];
+        let currentLoanId = null;
+        let debtorPaymentsChart, loansDistributionChart;
+        
+        // Inicialización
+        document.addEventListener('DOMContentLoaded', function() {
+            // Establecer fecha actual
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('loan-date').value = today;
+            document.getElementById('payment-date').value = today;
+            document.getElementById('current-date').textContent = `Fecha: ${formatDate(new Date())}`;
+            
+            // Configurar tabs
+            setupTabs();
+            
+            // Cargar datos existentes
+            loadCapital();
+            loadActiveLoans();
+            updateDashboard();
+            updateCapitalSelect();
+            updateFundsAlert();
+            updateCharts();
+            updatePaymentFrequencyStats(); // Nueva función
+            
+            // Configurar formularios
+            document.getElementById('loan-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addLoan();
+            });
+            
+            document.getElementById('capital-form').addEventListener('submit', function(e) {
+                e.preventDefault();
+                addCapital();
+            });
+            
+            // Event listeners para el cálculo en tiempo real
+            document.getElementById('loan-amount').addEventListener('input', updateCalculationPreview);
+            document.getElementById('interest-rate').addEventListener('input', updateCalculationPreview);
+            document.getElementById('interest-type').addEventListener('change', updateCalculationPreview);
+            document.getElementById('installment-type').addEventListener('change', updateCalculationPreview);
+            document.getElementById('installment-count').addEventListener('input', updateCalculationPreview);
+            
+            // Configurar formularios
+            document.getElementById('confirm-payment').addEventListener('click', confirmPayment);
+            document.getElementById('cancel-payment').addEventListener('click', cancelPayment);
+            document.getElementById('confirm-edit-source').addEventListener('click', confirmEditSource);
+            document.getElementById('cancel-edit-source').addEventListener('click', cancelEditSource);
+            
+            // Configurar actualización desde archivo
+            document.getElementById('backup-file-input').addEventListener('change', function(e) {
+                if (e.target.files.length > 0) {
+                    document.getElementById('update-button').disabled = false;
+                    document.getElementById('update-status').textContent = `Archivo seleccionado: ${e.target.files[0].name}`;
+                }
+            });
+        });
+        
+        // Configuración de pestañas
+        function setupTabs() {
+            const tabs = document.querySelectorAll('.tab');
+            
+            tabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                    
+                    this.classList.add('active');
+                    const tabId = this.getAttribute('data-tab');
+                    document.getElementById(`${tabId}-tab`).classList.add('active');
+                    
+                    if (tabId === 'dashboard') {
+                        updateDashboard();
+                        updateCharts();
+                        updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+                    } else if (tabId === 'capital') {
+                        updateCapitalStats();
+                    } else if (tabId === 'active-loans') {
+                        loadActiveLoans();
+                    }
+                });
+            });
+        }
+        
+        // Formatear input de moneda mientras se escribe (sin centavos)
+        function formatCurrencyInput(input) {
+            // Obtener cursor position
+            let cursorPos = input.selectionStart;
+            let originalValue = input.value;
+            
+            // Remover todos los caracteres no numéricos
+            let value = originalValue.replace(/[^\d]/g, '');
+            
+            // Remover ceros a la izquierda, pero mantener al menos un cero
+            value = value.replace(/^0+/g, '');
+            if (value === '') value = '0';
+            
+            // Agregar puntos de miles
+            value = value.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            
+            input.value = value;
+            
+            // Restaurar cursor position aproximado
+            setTimeout(() => {
+                if (cursorPos > input.value.length) {
+                    cursorPos = input.value.length;
+                }
+                input.setSelectionRange(cursorPos, cursorPos);
+            }, 0);
+            
+            // Actualizar vista previa
+            setTimeout(() => updateCalculationPreview(), 10);
+        }
+        
+        // Validar input de moneda al perder foco (sin centavos)
+        function validateCurrencyInput(input) {
+            let value = input.value.trim();
+            
+            if (!value) {
+                input.value = '0';
+                return;
+            }
+            
+            // Remover puntos y dejar solo números
+            value = value.replace(/\./g, '');
+            
+            // Asegurar que sea un número válido
+            if (isNaN(value) || value === '') {
+                input.value = '0';
+                return;
+            }
+            
+            // Convertir a número entero
+            value = parseInt(value);
+            if (isNaN(value)) value = 0;
+            
+            // Formatear con puntos de miles
+            input.value = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
+        
+        // Formatear input de porcentaje (sin decimales)
+        function formatPercentageInput(input) {
+            let value = input.value;
+            
+            // Permitir solo números
+            value = value.replace(/[^\d]/g, '');
+            
+            // Remover ceros a la izquierda
+            value = value.replace(/^0+/g, '');
+            if (value === '') value = '0';
+            
+            input.value = value;
+            
+            // Actualizar vista previa
+            setTimeout(() => updateCalculationPreview(), 10);
+        }
+        
+        // Validar input de porcentaje (sin decimales)
+        function validatePercentageInput(input) {
+            let value = input.value.trim();
+            
+            if (!value) {
+                input.value = '0';
+                return;
+            }
+            
+            // Asegurar que sea un número
+            value = value.replace(/[^\d]/g, '');
+            if (value === '') value = '0';
+            
+            // Convertir a número entero
+            value = parseInt(value);
+            if (isNaN(value)) value = 0;
+            
+            input.value = value.toString();
+        }
+        
+        // Convertir string formateado a número (sin centavos)
+        function parseCurrency(value) {
+            if (!value) return 0;
+            
+            // Remover puntos de miles
+            const cleanValue = value.toString().replace(/\./g, '');
+            
+            return parseInt(cleanValue) || 0;
+        }
+        
+        // Formatear número como moneda (sin centavos)
+        function formatMoney(amount) {
+            if (amount === null || amount === undefined) return '$0';
+            
+            // Convertir a número si es string
+            const numAmount = typeof amount === 'string' ? parseCurrency(amount) : amount;
+            
+            // Redondear a número entero
+            const integerAmount = Math.round(numAmount);
+            
+            // Formatear con puntos de miles
+            return `$${integerAmount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}`;
+        }
+        
+        // NUEVA FUNCIÓN: Calcular dinero por cobrar según frecuencia
+        function updatePaymentFrequencyStats() {
+            // Inicializar contadores
+            let dailyAmount = 0;
+            let dailyCount = 0;
+            let weeklyAmount = 0;
+            let weeklyCount = 0;
+            let biweeklyAmount = 0;
+            let biweeklyCount = 0;
+            let monthlyAmount = 0;
+            let monthlyCount = 0;
+            
+            // Filtrar solo préstamos activos
+            const activeLoans = loans.filter(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                return paidAmount < loan.totalAmount;
+            });
+            
+            // Calcular montos por frecuencia
+            activeLoans.forEach(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                const pendingAmount = loan.totalAmount - paidAmount;
+                const pendingInstallments = Math.ceil(pendingAmount / loan.installmentAmount);
+                const amountPerInstallment = loan.installmentAmount;
+                
+                switch(loan.installmentType) {
+                    case 'days':
+                        dailyAmount += amountPerInstallment;
+                        dailyCount++;
+                        break;
+                    case 'weeks':
+                        weeklyAmount += amountPerInstallment;
+                        weeklyCount++;
+                        break;
+                    case 'biweekly':
+                        biweeklyAmount += amountPerInstallment;
+                        biweeklyCount++;
+                        break;
+                    case 'months':
+                        monthlyAmount += amountPerInstallment;
+                        monthlyCount++;
+                        break;
+                }
+            });
+            
+            // Actualizar la interfaz
+            document.getElementById('daily-payment-amount').textContent = formatMoney(dailyAmount);
+            document.getElementById('daily-payment-count').textContent = `${dailyCount} préstamo${dailyCount !== 1 ? 's' : ''}`;
+            
+            document.getElementById('weekly-payment-amount').textContent = formatMoney(weeklyAmount);
+            document.getElementById('weekly-payment-count').textContent = `${weeklyCount} préstamo${weeklyCount !== 1 ? 's' : ''}`;
+            
+            document.getElementById('biweekly-payment-amount').textContent = formatMoney(biweeklyAmount);
+            document.getElementById('biweekly-payment-count').textContent = `${biweeklyCount} préstamo${biweeklyCount !== 1 ? 's' : ''}`;
+            
+            document.getElementById('monthly-payment-amount').textContent = formatMoney(monthlyAmount);
+            document.getElementById('monthly-payment-count').textContent = `${monthlyCount} préstamo${monthlyCount !== 1 ? 's' : ''}`;
+        }
+        
+        // Actualizar selector de fuentes de capital
+        function updateCapitalSelect() {
+            const select = document.getElementById('capital-source');
+            select.innerHTML = '<option value="">Seleccione fuente de capital</option>';
+            
+            capital.forEach(fund => {
+                const option = document.createElement('option');
+                option.value = fund.id;
+                option.textContent = `${fund.name} - ${formatMoney(fund.currentAmount)} disponible`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Actualizar selector de destino de pagos
+        function updatePaymentDestinationSelect() {
+            const select = document.getElementById('payment-destination');
+            select.innerHTML = '<option value="">Seleccione destino del pago</option>';
+            
+            capital.forEach(fund => {
+                const option = document.createElement('option');
+                option.value = fund.id;
+                option.textContent = `${fund.name} - ${formatMoney(fund.currentAmount)} actual`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Actualizar selector de nueva fuente de capital
+        function updateNewCapitalSourceSelect() {
+            const select = document.getElementById('new-capital-source');
+            select.innerHTML = '<option value="">Seleccione nueva fuente</option>';
+            
+            capital.forEach(fund => {
+                const option = document.createElement('option');
+                option.value = fund.id;
+                option.textContent = `${fund.name} - ${formatMoney(fund.currentAmount)} disponible`;
+                select.appendChild(option);
+            });
+        }
+        
+        // Mostrar advertencia de capital
+        function showCapitalWarning() {
+            const sourceId = document.getElementById('capital-source').value;
+            const loanAmount = parseCurrency(document.getElementById('loan-amount').value);
+            
+            if (!sourceId || loanAmount <= 0) {
+                document.getElementById('capital-warning').style.display = 'none';
+                return;
+            }
+            
+            const capitalSource = capital.find(fund => fund.id == sourceId);
+            if (!capitalSource) return;
+            
+            const warningDiv = document.getElementById('capital-warning');
+            const warningText = document.getElementById('capital-warning-text');
+            
+            if (capitalSource.currentAmount < loanAmount) {
+                warningText.textContent = `⚠️ ATENCIÓN: La fuente "${capitalSource.name}" solo tiene ${formatMoney(capitalSource.currentAmount)} disponible, pero el préstamo es por ${formatMoney(loanAmount)}. No hay fondos suficientes.`;
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'funds-available danger';
+            } else if (capitalSource.currentAmount - loanAmount < loanAmount * 0.1) {
+                warningText.textContent = `⚠️ ADVERTENCIA: Al realizar este préstamo, la fuente "${capitalSource.name}" quedaría con solo ${formatMoney(capitalSource.currentAmount - loanAmount)} disponible.`;
+                warningDiv.style.display = 'block';
+                warningDiv.className = 'funds-available warning';
+            } else {
+                warningDiv.style.display = 'none';
+            }
+        }
+        
+        // Actualizar alerta de fondos disponibles
+        function updateFundsAlert() {
+            const alert = document.getElementById('funds-alert');
+            const totalAvailable = capital.reduce((sum, fund) => sum + fund.currentAmount, 0);
+            
+            if (totalAvailable === 0) {
+                alert.innerHTML = `
+                    <div class="funds-available danger">
+                        <strong>⚠️ Sin capital disponible</strong>
+                        <p>Debes agregar fondos a tu capital antes de realizar préstamos.</p>
+                    </div>
+                `;
+            } else {
+                alert.innerHTML = `
+                    <div class="funds-available">
+                        <strong>✅ Capital disponible: ${formatMoney(totalAvailable)}</strong>
+                        <p>Puedes realizar préstamos usando tus fondos disponibles.</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Actualizar vista previa del cálculo
+        function updateCalculationPreview() {
+            const loanAmount = parseCurrency(document.getElementById('loan-amount').value);
+            const interestRate = parseCurrency(document.getElementById('interest-rate').value) || 0;
+            const interestType = document.getElementById('interest-type').value;
+            const installmentCount = parseInt(document.getElementById('installment-count').value) || 1;
+            const installmentType = document.getElementById('installment-type').value;
+            
+            if (loanAmount <= 0 || interestRate <= 0) {
+                document.getElementById('calculation-preview').style.display = 'none';
+                return;
+            }
+            
+            // Calcular intereses según el tipo seleccionado
+            let totalInterest = 0;
+            let totalAmount = 0;
+            
+            if (interestType === 'monthly') {
+                // Interés mensual - se aplica cada mes
+                const months = getMonthsFromInstallments(installmentCount, installmentType);
+                totalInterest = loanAmount * (interestRate / 100) * months;
+                totalAmount = loanAmount + totalInterest;
+            } else {
+                // Interés total del período
+                totalInterest = loanAmount * (interestRate / 100);
+                totalAmount = loanAmount + totalInterest;
+            }
+            
+            const installmentAmount = totalAmount / installmentCount;
+            
+            // Actualizar vista previa
+            document.getElementById('preview-principal').textContent = formatMoney(loanAmount);
+            document.getElementById('preview-interest').textContent = formatMoney(totalInterest);
+            document.getElementById('preview-total').textContent = formatMoney(totalAmount);
+            document.getElementById('preview-installment').textContent = formatMoney(installmentAmount);
+            document.getElementById('calculation-preview').style.display = 'block';
+            
+            // Actualizar advertencia de capital
+            showCapitalWarning();
+        }
+        
+        // Calcular meses equivalentes según el tipo de cuota
+        function getMonthsFromInstallments(installmentCount, installmentType) {
+            switch(installmentType) {
+                case 'days':
+                    return installmentCount / 30; // Aproximadamente
+                case 'weeks':
+                    return installmentCount / 4; // Aproximadamente
+                case 'biweekly':
+                    return installmentCount / 2; // 2 quincenas por mes
+                case 'months':
+                    return installmentCount;
+                default:
+                    return installmentCount;
+            }
+        }
+        
+        // Agregar nuevo préstamo
+        function addLoan() {
+            const debtorName = document.getElementById('debtor-name').value;
+            const loanAmount = parseCurrency(document.getElementById('loan-amount').value);
+            const interestRate = parseCurrency(document.getElementById('interest-rate').value);
+            const interestType = document.getElementById('interest-type').value;
+            const loanDate = document.getElementById('loan-date').value;
+            const capitalSourceId = document.getElementById('capital-source').value;
+            const installmentType = document.getElementById('installment-type').value;
+            const installmentCount = parseInt(document.getElementById('installment-count').value);
+            
+            // Validaciones básicas
+            if (!debtorName || !loanAmount || !interestRate || !installmentCount || !capitalSourceId) {
+                showNotification('Por favor, complete todos los campos', 'error');
+                return;
+            }
+            
+            // Verificar que hay fondos suficientes
+            const capitalSource = capital.find(fund => fund.id == capitalSourceId);
+            if (!capitalSource) {
+                showNotification('Fuente de capital no encontrada', 'error');
+                return;
+            }
+            
+            if (capitalSource.currentAmount < loanAmount) {
+                showNotification(`Fondos insuficientes. ${capitalSource.name} solo tiene ${formatMoney(capitalSource.currentAmount)} disponible`, 'error');
+                return;
+            }
+            
+            // Confirmar antes de descontar
+            if (!confirm(`¿Está seguro de descontar ${formatMoney(loanAmount)} de "${capitalSource.name}" para el préstamo a ${debtorName}?`)) {
+                showNotification('Préstamo cancelado', 'warning');
+                return;
+            }
+            
+            // Calcular el total con intereses
+            let totalInterest = 0;
+            let totalAmount = 0;
+            
+            if (interestType === 'monthly') {
+                const months = getMonthsFromInstallments(installmentCount, installmentType);
+                totalInterest = loanAmount * (interestRate / 100) * months;
+                totalAmount = loanAmount + totalInterest;
+            } else {
+                totalInterest = loanAmount * (interestRate / 100);
+                totalAmount = loanAmount + totalInterest;
+            }
+            
+            const installmentAmount = totalAmount / installmentCount;
+            
+            // Calcular fechas de vencimiento
+            const installmentDates = calculateInstallmentDates(loanDate, installmentType, installmentCount);
+            
+            // Crear objeto de préstamo
+            const loan = {
+                id: Date.now(),
+                debtorName,
+                loanAmount,
+                interestRate,
+                interestType,
+                totalInterest,
+                totalAmount,
+                installmentAmount,
+                loanDate,
+                capitalSourceId: parseInt(capitalSourceId),
+                capitalSourceName: capitalSource.name,
+                installmentType,
+                installmentCount,
+                installmentDates,
+                payments: [],
+                status: 'active'
+            };
+            
+            // Descontar del capital
+            capitalSource.currentAmount -= loanAmount;
+            capitalSource.loanedAmount += loanAmount;
+            
+            // Agregar a la lista
+            loans.push(loan);
+            
+            // Guardar en localStorage
+            saveData();
+            
+            // Recargar la lista
+            loadActiveLoans();
+            loadCapital();
+            updateCapitalSelect();
+            updateFundsAlert();
+            updateCharts();
+            updateDashboard();
+            updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+            
+            // Limpiar formulario
+            document.getElementById('loan-form').reset();
+            document.getElementById('loan-date').value = new Date().toISOString().split('T')[0];
+            document.getElementById('calculation-preview').style.display = 'none';
+            document.getElementById('capital-warning').style.display = 'none';
+            
+            // Mostrar mensaje de éxito
+            showNotification(`Préstamo registrado exitosamente. Se descontaron ${formatMoney(loanAmount)} de "${capitalSource.name}"`, 'success');
+        }
+        
+        // Agregar capital
+        function addCapital() {
+            const capitalName = document.getElementById('capital-name').value;
+            const capitalAmount = parseCurrency(document.getElementById('capital-amount').value);
+            
+            // Validaciones básicas
+            if (!capitalName || !capitalAmount) {
+                showNotification('Por favor, complete todos los campos', 'error');
+                return;
+            }
+            
+            // Crear objeto de capital
+            const fund = {
+                id: Date.now(),
+                name: capitalName,
+                initialAmount: capitalAmount,
+                currentAmount: capitalAmount,
+                loanedAmount: 0
+            };
+            
+            // Agregar a la lista
+            capital.push(fund);
+            
+            // Guardar en localStorage
+            saveData();
+            
+            // Recargar la lista
+            loadCapital();
+            updateCapitalSelect();
+            updateFundsAlert();
+            
+            // Limpiar formulario
+            document.getElementById('capital-form').reset();
+            
+            // Mostrar mensaje de éxito
+            showNotification('Capital agregado exitosamente', 'success');
+        }
+        
+        // Calcular fechas de vencimiento
+        function calculateInstallmentDates(startDate, type, count) {
+            const dates = [];
+            const start = new Date(startDate);
+            
+            for (let i = 1; i <= count; i++) {
+                const date = new Date(start);
+                
+                switch(type) {
+                    case 'days':
+                        date.setDate(start.getDate() + i);
+                        break;
+                    case 'weeks':
+                        date.setDate(start.getDate() + i * 7);
+                        break;
+                    case 'biweekly':
+                        date.setDate(start.getDate() + i * 15);
+                        break;
+                    case 'months':
+                        date.setMonth(start.getMonth() + i);
+                        break;
+                }
+                
+                dates.push(date.toISOString().split('T')[0]);
+            }
+            
+            return dates;
+        }
+        
+        // Cargar lista de préstamos activos
+        function loadActiveLoans() {
+            const activeLoansList = document.getElementById('active-loans-list');
+            activeLoansList.innerHTML = '';
+            
+            // Filtrar solo préstamos activos (con saldo pendiente)
+            const activeLoans = loans.filter(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                return paidAmount < loan.totalAmount;
+            });
+            
+            if (activeLoans.length === 0) {
+                activeLoansList.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 40px; color: #95a5a6;">
+                            <div>📋 No hay préstamos activos</div>
+                            <div style="margin-top: 10px; font-size: 0.9em;">Todos los préstamos están pagados</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            activeLoans.forEach(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                const pendingAmount = loan.totalAmount - paidAmount;
+                
+                const statusClass = pendingAmount > 0 ? 'status-pending' : 'status-paid';
+                const statusText = pendingAmount > 0 ? 'Pendiente' : 'Pagado';
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${loan.debtorName}</td>
+                    <td>${formatMoney(loan.loanAmount)}</td>
+                    <td>${loan.interestRate}% ${loan.interestType === 'monthly' ? 'mensual' : 'total'}</td>
+                    <td>${loan.capitalSourceName}</td>
+                    <td>${formatMoney(loan.totalAmount)}</td>
+                    <td>${formatMoney(loan.installmentAmount)}</td>
+                    <td>${formatDate(new Date(loan.loanDate))}</td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td class="action-buttons">
+                        <button class="btn-small" onclick="viewDebtorDetails(${loan.id})">👁️ Ver</button>
+                        <button class="btn-small btn-success" onclick="recordPayment(${loan.id})">💵 Pago</button>
+                        <button class="btn-small btn-warning" onclick="editSource(${loan.id})">✏️ Fuente</button>
+                        <button class="btn-small btn-danger" onclick="deleteLoan(${loan.id})">🗑️ Eliminar</button>
+                    </td>
+                `;
+                
+                activeLoansList.appendChild(row);
+            });
+        }
+        
+        // Ver detalles del deudor
+        function viewDebtorDetails(loanId) {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+            
+            const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+            const pendingAmount = loan.totalAmount - paidAmount;
+            const paymentsCount = loan.payments.length;
+            
+            // Actualizar título
+            document.getElementById('debtor-details-title').textContent = `Detalles del Préstamo - ${loan.debtorName}`;
+            
+            // Actualizar información básica
+            const infoGrid = document.getElementById('debtor-info-grid');
+            infoGrid.innerHTML = `
+                <div class="debtor-info-item">
+                    <strong>Monto del Préstamo</strong>
+                    <div>${formatMoney(loan.loanAmount)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Tasa de Interés</strong>
+                    <div>${loan.interestRate}% ${loan.interestType === 'monthly' ? 'mensual' : 'total'}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Total a Pagar</strong>
+                    <div>${formatMoney(loan.totalAmount)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Valor por Cuota</strong>
+                    <div>${formatMoney(loan.installmentAmount)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Cuotas</strong>
+                    <div>${loan.installmentCount} ${getInstallmentTypeText(loan.installmentType)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Fecha del Préstamo</strong>
+                    <div>${formatDate(new Date(loan.loanDate))}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Fuente de Capital</strong>
+                    <div>${loan.capitalSourceName}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Monto Pagado</strong>
+                    <div>${formatMoney(paidAmount)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Saldo Pendiente</strong>
+                    <div>${formatMoney(pendingAmount)}</div>
+                </div>
+                <div class="debtor-info-item">
+                    <strong>Pagos Realizados</strong>
+                    <div>${paymentsCount}</div>
+                </div>
+            `;
+            
+            // Actualizar historial de pagos
+            const paymentHistory = document.getElementById('debtor-payment-history');
+            if (loan.payments.length > 0) {
+                let historyHTML = '<h4>💳 Historial de Pagos</h4><ul style="list-style: none; padding: 0;">';
+                loan.payments.forEach(payment => {
+                    historyHTML += `
+                        <li style="padding: 10px; background: white; margin-bottom: 5px; border-radius: 5px; border-left: 3px solid var(--secondary-color);">
+                            <strong>${formatDate(new Date(payment.date))}</strong> - 
+                            ${formatMoney(payment.amount)} 
+                            <span style="color: #666; font-size: 0.9em;">(Destino: ${payment.destinationName})</span>
+                        </li>
+                    `;
+                });
+                historyHTML += '</ul>';
+                paymentHistory.innerHTML = historyHTML;
+            } else {
+                paymentHistory.innerHTML = '<p style="color: #666; font-style: italic;">No hay pagos registrados</p>';
+            }
+            
+            // Mostrar detalles
+            document.getElementById('debtor-details').style.display = 'block';
+        }
+        
+        // Imprimir detalles del deudor
+        function printDebtorDetails() {
+            window.print();
+        }
+        
+        // Cargar lista de capital
+        function loadCapital() {
+            const capitalList = document.getElementById('capital-list');
+            capitalList.innerHTML = '';
+            
+            if (capital.length === 0) {
+                capitalList.innerHTML = `
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 40px; color: #95a5a6;">
+                            <div>🏦 No hay fondos registrados</div>
+                            <div style="margin-top: 10px; font-size: 0.9em;">Comienza agregando fondos a tu capital</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            capital.forEach(fund => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${fund.name}</td>
+                    <td>${formatMoney(fund.initialAmount)}</td>
+                    <td>${formatMoney(fund.currentAmount)}</td>
+                    <td>${formatMoney(fund.loanedAmount)}</td>
+                    <td class="action-buttons">
+                        <button class="btn-small btn-warning" onclick="addMoreCapital(${fund.id})">➕ Agregar</button>
+                        <button class="btn-small btn-danger" onclick="deleteCapital(${fund.id})">🗑️ Eliminar</button>
+                    </td>
+                `;
+                
+                capitalList.appendChild(row);
+            });
+            
+            updateCapitalStats();
+        }
+        
+        // Agregar más capital a un fondo existente
+        function addMoreCapital(fundId) {
+            const fund = capital.find(f => f.id === fundId);
+            if (!fund) return;
+            
+            const amountStr = prompt(`Ingrese el monto a agregar a ${fund.name}:`, "0");
+            const amount = parseCurrency(amountStr);
+            
+            if (isNaN(amount) || amount <= 0) {
+                showNotification('Monto inválido', 'error');
+                return;
+            }
+            
+            fund.initialAmount += amount;
+            fund.currentAmount += amount;
+            
+            saveData();
+            loadCapital();
+            updateCapitalSelect();
+            updatePaymentDestinationSelect();
+            updateFundsAlert();
+            
+            showNotification('Capital agregado exitosamente', 'success');
+        }
+        
+        // Eliminar un fondo de capital
+        function deleteCapital(fundId) {
+            const fund = capital.find(f => f.id === fundId);
+            if (!fund) return;
+            
+            // Verificar que no tenga préstamos activos
+            const hasActiveLoans = loans.some(loan => loan.capitalSourceId === fundId && loan.status === 'active');
+            
+            if (hasActiveLoans) {
+                showNotification('No puedes eliminar un fondo con préstamos activos', 'error');
+                return;
+            }
+            
+            if (!confirm(`¿Está seguro de que desea eliminar el fondo "${fund.name}"?`)) {
+                return;
+            }
+            
+            capital = capital.filter(f => f.id !== fundId);
+            saveData();
+            loadCapital();
+            updateCapitalSelect();
+            updatePaymentDestinationSelect();
+            updateFundsAlert();
+            
+            showNotification('Fondo eliminado', 'success');
+        }
+        
+        // Editar fuente de capital de un préstamo
+        function editSource(loanId) {
+            currentLoanId = loanId;
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+            
+            // Actualizar selector de nueva fuente
+            updateNewCapitalSourceSelect();
+            
+            document.getElementById('edit-source-form').classList.add('active');
+        }
+        
+        // Confirmar cambio de fuente
+        function confirmEditSource() {
+            if (!currentLoanId) return;
+            
+            const loan = loans.find(l => l.id === currentLoanId);
+            if (!loan) return;
+            
+            const newSourceId = document.getElementById('new-capital-source').value;
+            
+            if (!newSourceId) {
+                showNotification('Por favor, seleccione una nueva fuente', 'error');
+                return;
+            }
+            
+            // Encontrar la fuente actual y nueva
+            const currentSource = capital.find(fund => fund.id === loan.capitalSourceId);
+            const newSource = capital.find(fund => fund.id == newSourceId);
+            
+            if (!currentSource || !newSource) {
+                showNotification('Fuente de capital no encontrada', 'error');
+                return;
+            }
+            
+            if (currentSource.id === newSource.id) {
+                showNotification('La nueva fuente es la misma que la actual', 'warning');
+                cancelEditSource();
+                return;
+            }
+            
+            // Verificar que la nueva fuente tenga fondos suficientes
+            if (newSource.currentAmount < loan.loanAmount) {
+                showNotification(`La nueva fuente "${newSource.name}" no tiene fondos suficientes`, 'error');
+                return;
+            }
+            
+            if (!confirm(`¿Está seguro de cambiar la fuente de "${currentSource.name}" a "${newSource.name}" para este préstamo?`)) {
+                return;
+            }
+            
+            // Devolver el capital a la fuente actual
+            currentSource.currentAmount += loan.loanAmount;
+            currentSource.loanedAmount -= loan.loanAmount;
+            
+            // Descontar de la nueva fuente
+            newSource.currentAmount -= loan.loanAmount;
+            newSource.loanedAmount += loan.loanAmount;
+            
+            // Actualizar el préstamo
+            loan.capitalSourceId = newSource.id;
+            loan.capitalSourceName = newSource.name;
+            
+            saveData();
+            loadActiveLoans();
+            loadCapital();
+            updateCapitalSelect();
+            updateFundsAlert();
+            updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+            cancelEditSource();
+            
+            showNotification(`Fuente cambiada exitosamente a "${newSource.name}"`, 'success');
+        }
+        
+        // Cancelar cambio de fuente
+        function cancelEditSource() {
+            document.getElementById('edit-source-form').classList.remove('active');
+            currentLoanId = null;
+        }
+        
+        // Actualizar estadísticas de capital
+        function updateCapitalStats() {
+            const totalCapital = capital.reduce((sum, fund) => sum + fund.initialAmount, 0);
+            const capitalLoaned = capital.reduce((sum, fund) => sum + fund.loanedAmount, 0);
+            const capitalAvailable = capital.reduce((sum, fund) => sum + fund.currentAmount, 0);
+            
+            document.getElementById('total-capital').textContent = formatMoney(totalCapital);
+            document.getElementById('capital-loaned').textContent = formatMoney(capitalLoaned);
+            document.getElementById('capital-available').textContent = formatMoney(capitalAvailable);
+        }
+        
+        // Resetear todos los datos
+        function resetAllData() {
+            if (!confirm('⚠️ ¿ESTÁ SEGURO DE QUE DESEA ELIMINAR TODOS LOS DATOS?\n\nEsta acción eliminará:\n• Todos los préstamos registrados\n• Todos los fondos de capital\n• Todo el historial de pagos\n\nEsta acción NO se puede deshacer.')) {
+                return;
+            }
+            
+            // Pedir confirmación final
+            if (!confirm('¿CONFIRMA QUE DESEA ELIMINAR DEFINITIVAMENTE TODOS LOS DATOS?')) {
+                return;
+            }
+            
+            // Limpiar todas las variables
+            loans = [];
+            capital = [];
+            
+            // Limpiar localStorage
+            localStorage.removeItem('loans');
+            localStorage.removeItem('capital');
+            localStorage.removeItem('backup');
+            
+            // Recargar todo
+            loadActiveLoans();
+            loadCapital();
+            updateDashboard();
+            updateCapitalSelect();
+            updateFundsAlert();
+            updateCharts();
+            updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+            
+            // Mostrar mensaje de confirmación
+            showNotification('✅ Todos los datos han sido eliminados correctamente', 'success');
+        }
+        
+        // Obtener texto del tipo de cuota
+        function getInstallmentTypeText(type) {
+            switch(type) {
+                case 'days': return 'diarias';
+                case 'weeks': return 'semanales';
+                case 'biweekly': return 'quincenales';
+                case 'months': return 'mensuales';
+                default: return '';
+            }
+        }
+        
+        // Registrar un pago
+        function recordPayment(loanId) {
+            currentLoanId = loanId;
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+            
+            const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+            const pendingAmount = loan.totalAmount - paidAmount;
+            
+            document.getElementById('payment-amount').value = '';
+            document.getElementById('payment-amount').setAttribute('placeholder', `Máximo: ${formatMoney(pendingAmount)}`);
+            document.getElementById('payment-date').value = new Date().toISOString().split('T')[0];
+            
+            // Actualizar selector de destino de pagos
+            updatePaymentDestinationSelect();
+            
+            document.getElementById('payment-form').classList.add('active');
+        }
+        
+        // Confirmar pago
+        function confirmPayment() {
+            if (!currentLoanId) return;
+            
+            const loan = loans.find(l => l.id === currentLoanId);
+            if (!loan) return;
+            
+            const amount = parseCurrency(document.getElementById('payment-amount').value);
+            const paymentDate = document.getElementById('payment-date').value;
+            const paymentDestinationId = document.getElementById('payment-destination').value;
+            
+            if (isNaN(amount) || amount <= 0) {
+                showNotification('Monto inválido', 'error');
+                return;
+            }
+            
+            if (!paymentDestinationId) {
+                showNotification('Por favor, seleccione un destino para el pago', 'error');
+                return;
+            }
+            
+            const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+            const pendingAmount = loan.totalAmount - paidAmount;
+            
+            if (amount > pendingAmount) {
+                showNotification('El monto excede el saldo pendiente', 'error');
+                return;
+            }
+            
+            // Encontrar el fondo destino
+            const destinationFund = capital.find(fund => fund.id == paymentDestinationId);
+            if (!destinationFund) {
+                showNotification('Destino de pago no válido', 'error');
+                return;
+            }
+            
+            const payment = {
+                date: paymentDate,
+                amount: amount,
+                destinationId: parseInt(paymentDestinationId),
+                destinationName: destinationFund.name
+            };
+            
+            loan.payments.push(payment);
+            
+            // Agregar el pago al fondo destino
+            destinationFund.currentAmount += amount;
+            
+            // Si se pagó todo, marcar como completado y devolver capital al fondo original
+            if (amount >= pendingAmount) {
+                loan.status = 'completed';
+                
+                // Devolver el capital al fondo original
+                const originalCapitalSource = capital.find(fund => fund.id === loan.capitalSourceId);
+                if (originalCapitalSource) {
+                    originalCapitalSource.currentAmount += loan.loanAmount;
+                    originalCapitalSource.loanedAmount -= loan.loanAmount;
+                }
+            }
+            
+            saveData();
+            loadActiveLoans();
+            loadCapital();
+            updateDashboard();
+            updateCapitalSelect();
+            updatePaymentDestinationSelect();
+            updateFundsAlert();
+            updateCharts();
+            updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+            cancelPayment();
+            
+            showNotification(`Pago registrado exitosamente en ${destinationFund.name}`, 'success');
+        }
+        
+        // Cancelar pago
+        function cancelPayment() {
+            document.getElementById('payment-form').classList.remove('active');
+            currentLoanId = null;
+        }
+        
+        // Eliminar un préstamo
+        function deleteLoan(loanId) {
+            const loan = loans.find(l => l.id === loanId);
+            if (!loan) return;
+            
+            // Si el préstamo tiene pagos, no se puede eliminar
+            if (loan.payments.length > 0) {
+                showNotification('No puedes eliminar un préstamo con pagos registrados', 'error');
+                return;
+            }
+            
+            if (!confirm('¿Está seguro de que desea eliminar este préstamo?')) {
+                return;
+            }
+            
+            // Devolver el capital al fondo
+            const capitalSource = capital.find(fund => fund.id === loan.capitalSourceId);
+            if (capitalSource) {
+                capitalSource.currentAmount += loan.loanAmount;
+                capitalSource.loanedAmount -= loan.loanAmount;
+            }
+            
+            loans = loans.filter(loan => loan.id !== loanId);
+            saveData();
+            loadActiveLoans();
+            loadCapital();
+            updateDashboard();
+            updateCapitalSelect();
+            updatePaymentDestinationSelect();
+            updateFundsAlert();
+            updateCharts();
+            updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+            
+            showNotification('Préstamo eliminado', 'success');
+        }
+        
+        // Actualizar panel de control
+        function updateDashboard() {
+            const totalEarnings = loans.reduce((sum, loan) => sum + loan.totalInterest, 0);
+            const totalLoaned = loans.reduce((sum, loan) => sum + loan.loanAmount, 0);
+            const totalRecaudo = loans.reduce((sum, loan) => {
+                return sum + loan.payments.reduce((paymentSum, payment) => paymentSum + payment.amount, 0);
+            }, 0);
+            const activeLoans = loans.filter(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                return paidAmount < loan.totalAmount;
+            }).length;
+            
+            document.getElementById('total-earnings').textContent = formatMoney(totalEarnings);
+            document.getElementById('total-loaned').textContent = formatMoney(totalLoaned);
+            document.getElementById('total-recaudo').textContent = formatMoney(totalRecaudo);
+            document.getElementById('active-loans').textContent = activeLoans;
+        }
+        
+        // Actualizar gráficos
+        function updateCharts() {
+            // Destruir gráficos anteriores si existen
+            if (debtorPaymentsChart) {
+                debtorPaymentsChart.destroy();
+            }
+            if (loansDistributionChart) {
+                loansDistributionChart.destroy();
+            }
+            
+            // Gráfico de historial de pagos por deudor
+            const debtorPaymentsCtx = document.getElementById('debtor-payments-chart').getContext('2d');
+            
+            // Agrupar préstamos por deudor
+            const debtors = [...new Set(loans.map(loan => loan.debtorName))];
+            const debtorData = debtors.map(debtor => {
+                const debtorLoans = loans.filter(loan => loan.debtorName === debtor);
+                const totalLoaned = debtorLoans.reduce((sum, loan) => sum + loan.loanAmount, 0);
+                const totalPaid = debtorLoans.reduce((sum, loan) => {
+                    return sum + loan.payments.reduce((paymentSum, payment) => paymentSum + payment.amount, 0);
+                }, 0);
+                return {
+                    debtor,
+                    totalLoaned,
+                    totalPaid,
+                    pending: totalLoaned - totalPaid
+                };
+            });
+            
+            debtorPaymentsChart = new Chart(debtorPaymentsCtx, {
+                type: 'bar',
+                data: {
+                    labels: debtors,
+                    datasets: [
+                        {
+                            label: 'Prestado',
+                            data: debtorData.map(d => d.totalLoaned),
+                            backgroundColor: '#3498db',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Pagado',
+                            data: debtorData.map(d => d.totalPaid),
+                            backgroundColor: '#2ecc71',
+                            borderWidth: 1
+                        },
+                        {
+                            label: 'Pendiente',
+                            data: debtorData.map(d => d.pending),
+                            backgroundColor: '#f39c12',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Historial de Préstamos por Deudor'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(value) {
+                                    return formatMoney(value);
+                                }
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Gráfico de distribución de préstamos por fuente
+            const loansDistributionCtx = document.getElementById('loans-distribution-chart').getContext('2d');
+            
+            // Agrupar préstamos por fuente de capital
+            const capitalSources = [...new Set(loans.map(loan => loan.capitalSourceName))];
+            const sourceData = capitalSources.map(source => {
+                const sourceLoans = loans.filter(loan => loan.capitalSourceName === source);
+                const totalLoaned = sourceLoans.reduce((sum, loan) => sum + loan.loanAmount, 0);
+                const totalInterest = sourceLoans.reduce((sum, loan) => sum + loan.totalInterest, 0);
+                return {
+                    source,
+                    totalLoaned,
+                    totalInterest
+                };
+            });
+            
+            loansDistributionChart = new Chart(loansDistributionCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: capitalSources,
+                    datasets: [{
+                        data: sourceData.map(d => d.totalLoaned),
+                        backgroundColor: [
+                            '#3498db', '#2ecc71', '#e74c3c', '#f39c12',
+                            '#9b59b6', '#1abc9c', '#d35400', '#34495e'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                boxWidth: 12,
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'Distribución de Préstamos por Fuente'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = sourceData.reduce((a, b) => a + b.totalLoaned, 0);
+                                    const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                                    return `${label}: ${formatMoney(value)} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        
+        // Exportar a Excel
+        function exportToExcel() {
+            // Preparar datos de préstamos
+            const loansData = loans.map(loan => {
+                const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                const pendingAmount = loan.totalAmount - paidAmount;
+                
+                return {
+                    'Deudor': loan.debtorName,
+                    'Monto Prestado': loan.loanAmount,
+                    'Interés %': loan.interestRate,
+                    'Tipo Interés': loan.interestType === 'monthly' ? 'Mensual' : 'Total',
+                    'Total a Pagar': loan.totalAmount,
+                    'Valor Cuota': loan.installmentAmount,
+                    'Cuotas': loan.installmentCount,
+                    'Tipo Cuota': getInstallmentTypeText(loan.installmentType),
+                    'Fuente': loan.capitalSourceName,
+                    'Fecha Préstamo': formatDate(new Date(loan.loanDate)),
+                    'Pagado': paidAmount,
+                    'Pendiente': pendingAmount,
+                    'Estado': pendingAmount > 0 ? 'Pendiente' : 'Pagado',
+                    'Número de Pagos': loan.payments.length
+                };
+            });
+            
+            // Preparar datos de capital
+            const capitalData = capital.map(fund => {
+                return {
+                    'Nombre Fondo': fund.name,
+                    'Monto Inicial': fund.initialAmount,
+                    'Monto Actual': fund.currentAmount,
+                    'Préstamos Activos': fund.loanedAmount,
+                    'Disponible para Préstamos': fund.currentAmount - fund.loanedAmount
+                };
+            });
+            
+            // Preparar resumen
+            const summaryData = [{
+                'Préstamos Totales': loans.length,
+                'Préstamos Activos': loans.filter(l => {
+                    const paid = l.payments.reduce((s, p) => s + p.amount, 0);
+                    return paid < l.totalAmount;
+                }).length,
+                'Capital Total': capital.reduce((s, f) => s + f.initialAmount, 0),
+                'Capital Prestado': capital.reduce((s, f) => s + f.loanedAmount, 0),
+                'Capital Disponible': capital.reduce((s, f) => s + f.currentAmount, 0),
+                'Ganancias Totales': loans.reduce((s, l) => s + l.totalInterest, 0),
+                'Recaudo Total': loans.reduce((s, l) => s + l.payments.reduce((sp, p) => sp + p.amount, 0), 0)
+            }];
+            
+            // Crear libro de Excel
+            const wb = XLSX.utils.book_new();
+            
+            // Hoja de préstamos
+            const wsLoans = XLSX.utils.json_to_sheet(loansData);
+            XLSX.utils.book_append_sheet(wb, wsLoans, "Préstamos");
+            
+            // Hoja de capital
+            const wsCapital = XLSX.utils.json_to_sheet(capitalData);
+            XLSX.utils.book_append_sheet(wb, wsCapital, "Capital");
+            
+            // Hoja de resumen
+            const wsSummary = XLSX.utils.json_to_sheet(summaryData);
+            XLSX.utils.book_append_sheet(wb, wsSummary, "Resumen");
+            
+            // Exportar
+            XLSX.writeFile(wb, `prestamos_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            showNotification('Datos exportados a Excel exitosamente', 'success');
+        }
+        
+        // Exportar a PDF
+        function exportToPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            
+            // Título
+            doc.setFontSize(20);
+            doc.text('Reporte de Préstamos', 105, 20, null, null, 'center');
+            doc.setFontSize(12);
+            doc.text(`Generado: ${formatDate(new Date())}`, 105, 30, null, null, 'center');
+            
+            let yPos = 40;
+            
+            // Resumen
+            doc.setFontSize(14);
+            doc.text('Resumen General', 20, yPos);
+            yPos += 10;
+            
+            doc.setFontSize(10);
+            doc.text(`Total Préstamos: ${loans.length}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Préstamos Activos: ${loans.filter(l => {
+                const paid = l.payments.reduce((s, p) => s + p.amount, 0);
+                return paid < l.totalAmount;
+            }).length}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Capital Total: ${formatMoney(capital.reduce((s, f) => s + f.initialAmount, 0))}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Capital Prestado: ${formatMoney(capital.reduce((s, f) => s + f.loanedAmount, 0))}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Capital Disponible: ${formatMoney(capital.reduce((s, f) => s + f.currentAmount, 0))}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Ganancias Totales: ${formatMoney(loans.reduce((s, l) => s + l.totalInterest, 0))}`, 20, yPos);
+            yPos += 7;
+            doc.text(`Recaudo Total: ${formatMoney(loans.reduce((s, l) => s + l.payments.reduce((sp, p) => sp + p.amount, 0), 0))}`, 20, yPos);
+            yPos += 15;
+            
+            // Préstamos
+            if (loans.length > 0) {
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Detalle de Préstamos', 20, 20);
+                
+                let startY = 30;
+                loans.forEach((loan, index) => {
+                    if (startY > 250) {
+                        doc.addPage();
+                        startY = 20;
+                    }
+                    
+                    const paidAmount = loan.payments.reduce((sum, payment) => sum + payment.amount, 0);
+                    const pendingAmount = loan.totalAmount - paidAmount;
+                    
+                    doc.setFontSize(10);
+                    doc.text(`${index + 1}. ${loan.debtorName}`, 20, startY);
+                    doc.text(`Monto: ${formatMoney(loan.loanAmount)}`, 40, startY + 7);
+                    doc.text(`Fuente: ${loan.capitalSourceName}`, 40, startY + 14);
+                    doc.text(`Estado: ${pendingAmount > 0 ? 'Pendiente' : 'Pagado'}`, 40, startY + 21);
+                    doc.text(`Pagado: ${formatMoney(paidAmount)} / ${formatMoney(loan.totalAmount)}`, 40, startY + 28);
+                    
+                    startY += 40;
+                });
+            }
+            
+            // Capital
+            if (capital.length > 0) {
+                doc.addPage();
+                doc.setFontSize(14);
+                doc.text('Detalle de Capital', 20, 20);
+                
+                let startY = 30;
+                capital.forEach((fund, index) => {
+                    if (startY > 250) {
+                        doc.addPage();
+                        startY = 20;
+                    }
+                    
+                    doc.setFontSize(10);
+                    doc.text(`${index + 1}. ${fund.name}`, 20, startY);
+                    doc.text(`Monto Inicial: ${formatMoney(fund.initialAmount)}`, 40, startY + 7);
+                    doc.text(`Monto Actual: ${formatMoney(fund.currentAmount)}`, 40, startY + 14);
+                    doc.text(`Préstamos Activos: ${formatMoney(fund.loanedAmount)}`, 40, startY + 21);
+                    doc.text(`Disponible: ${formatMoney(fund.currentAmount - fund.loanedAmount)}`, 40, startY + 28);
+                    
+                    startY += 40;
+                });
+            }
+            
+            // Guardar PDF
+            doc.save(`reporte_prestamos_${new Date().toISOString().split('T')[0]}.pdf`);
+            
+            showNotification('Reporte PDF generado exitosamente', 'success');
+        }
+        
+        // Exportar todos los datos
+        function exportAllData() {
+            exportToExcel();
+            setTimeout(() => {
+                exportToPDF();
+            }, 1000);
+        }
+        
+        // Crear backup
+        function createBackup() {
+            const backupData = {
+                loans: loans,
+                capital: capital,
+                backupDate: new Date().toISOString(),
+                appVersion: '1.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(backupData, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `backup_prestamos_${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            // Guardar información del backup en localStorage
+            localStorage.setItem('backup', JSON.stringify({
+                date: new Date().toISOString(),
+                file: a.download
+            }));
+            
+            // Mostrar información del backup
+            document.getElementById('backup-info').style.display = 'block';
+            document.getElementById('backup-date').textContent = formatDate(new Date());
+            document.getElementById('backup-file').textContent = a.download;
+            
+            showNotification('Backup creado exitosamente', 'success');
+        }
+        
+        // Restaurar backup
+        function restoreBackup() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    try {
+                        const backupData = JSON.parse(event.target.result);
+                        
+                        if (!backupData.loans || !backupData.capital) {
+                            showNotification('Archivo de backup inválido', 'error');
+                            return;
+                        }
+                        
+                        if (!confirm('¿Está seguro de que desea restaurar este backup? Esto sobrescribirá todos los datos actuales.')) {
+                            return;
+                        }
+                        
+                        // Restaurar datos
+                        loans = backupData.loans;
+                        capital = backupData.capital;
+                        
+                        // Guardar en localStorage
+                        saveData();
+                        
+                        // Recargar todo
+                        loadActiveLoans();
+                        loadCapital();
+                        updateDashboard();
+                        updateCapitalSelect();
+                        updateFundsAlert();
+                        updateCharts();
+                        updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+                        
+                        showNotification('Backup restaurado exitosamente', 'success');
+                    } catch (error) {
+                        showNotification('Error al leer el archivo de backup', 'error');
+                        console.error(error);
+                    }
+                };
+                reader.readAsText(file);
+            };
+            
+            input.click();
+        }
+        
+        // Actualizar desde backup
+        function updateFromBackup() {
+            const fileInput = document.getElementById('backup-file-input');
+            if (!fileInput.files.length) return;
+            
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+            
+            reader.onload = function(event) {
+                try {
+                    const backupData = JSON.parse(event.target.result);
+                    
+                    if (!backupData.loans || !backupData.capital) {
+                        showNotification('Archivo de backup inválido', 'error');
+                        return;
+                    }
+                    
+                    if (!confirm('¿Está seguro de que desea actualizar la aplicación con este backup? Esto sobrescribirá todos los datos actuales.')) {
+                        return;
+                    }
+                    
+                    // Restaurar datos
+                    loans = backupData.loans;
+                    capital = backupData.capital;
+                    
+                    // Guardar en localStorage
+                    saveData();
+                    
+                    // Recargar todo
+                    loadActiveLoans();
+                    loadCapital();
+                    updateDashboard();
+                    updateCapitalSelect();
+                    updateFundsAlert();
+                    updateCharts();
+                    updatePaymentFrequencyStats(); // Actualizar estadísticas de frecuencia
+                    
+                    // Limpiar input
+                    fileInput.value = '';
+                    document.getElementById('update-button').disabled = true;
+                    document.getElementById('update-status').textContent = '';
+                    
+                    showNotification('Aplicación actualizada desde backup exitosamente', 'success');
+                } catch (error) {
+                    showNotification('Error al leer el archivo de backup', 'error');
+                    console.error(error);
+                }
+            };
+            
+            reader.readAsText(file);
+        }
+        
+        // Mostrar notificación
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const notificationMessage = document.getElementById('notification-message');
+            
+            notificationMessage.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        }
+        
+        // Guardar datos en localStorage
+        function saveData() {
+            localStorage.setItem('loans', JSON.stringify(loans));
+            localStorage.setItem('capital', JSON.stringify(capital));
+        }
+        
+        // Formatear fecha
+        function formatDate(date) {
+            return date.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        }
+    </script>
+</body>
+</html>
